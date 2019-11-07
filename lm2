@@ -1,0 +1,55 @@
+use [Claims-HW2]
+--This table contains claims of the patients - Patient ID, diagnosis code, billed amount, in patient or out 
+SELECT * FROM tblClaims
+
+-- This table contains definitions of chronic conditions and definitions fro the website of Health Research and Quality
+SELECT * FROM cci2015
+
+--Preprocessing the Data
+ALTER TABLE tblClaims ALTER COLUMN [DIGNSS_C] varchar(50)
+
+SET QUOTED_IDENTIFIER OFF
+UPDATE cci2015
+SET ['ICD-9-CM CODE'] = REPLACE(['ICD-9-CM CODE'], "'", "")
+SET QUOTED_IDENTIFIER ON
+
+SET QUOTED_IDENTIFIER OFF
+UPDATE cci2015
+SET ['CATEGORY DESCRIPTION'] = REPLACE(['CATEGORY DESCRIPTION'], "'", "")
+SET QUOTED_IDENTIFIER ON
+
+SET QUOTED_IDENTIFIER OFF
+UPDATE cci2015
+SET ['BODY SYSTEM'] = REPLACE(['BODY SYSTEM'], "'", "")
+SET QUOTED_IDENTIFIER ON
+
+/*ALTER TABLE [claimMap].[dbo].[claimsMap] ALTER COLUMN ['CATEGORY DESCRIPTION'] INT
+ALTER TABLE [claimMap].[dbo].[claimsMap] ALTER COLUMN ['BODY SYSTEM'] INT*/
+
+--- End of Preprocessing the Data
+
+
+------ LM2 4a-  How many patients have chronic conditions?
+
+SELECT  count(*) as 'Patient Count' , ['CATEGORY DESCRIPTION']
+FROM tblClaims, cci2015
+WHERE ['CATEGORY DESCRIPTION'] = 1 and ['ICD-9-CM CODE'] NOT LIKE 'V%' and [DIGNSS_C] = CAST(['ICD-9-CM CODE'] AS INT)
+group by ['CATEGORY DESCRIPTION']
+
+
+------ LM2 4b - What is the most common chronic condition?
+SELECT distinct  [DIGNSS_C], ['ICD-9-CM CODE DESCRIPTION']
+FROM tblClaims, cci2015
+WHERE [DIGNSS_C] = (
+      Select TOP 1 [DIGNSS_C], ['CATEGORY DESCRIPTION'] from tblClaims , cci2015 where ['CATEGORY DESCRIPTION'] = '1' 
+	  and ['ICD-9-CM CODE'] NOT LIKE 'V%' and [DIGNSS_C] = CAST(['ICD-9-CM CODE'] AS INT)  GROUP BY [DIGNSS_C], ['CATEGORY DESCRIPTION']
+ORDER BY COUNT(distinct PTID) DESC)
+
+Select * from tblClaims
+Select * from cci2015 where ['ICD-9-CM CODE'] = '462' 
+
+---LM2 - 4c What is the largest number of different body systems involved for a single patient? Which patient(s)?
+Select count(['BODY SYSTEM']), ['BODY SYSTEM'] from claimsMap , newcosts$ where PTID =(Select distinct PTID from newcosts$)
+group by  ['BODY SYSTEM']
+order by count(['BODY SYSTEM'])  
+
